@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Call Detail - Feedback</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      padding: 24px;
+      margin: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .header {
+      background: #fff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 8px 0;
+      color: #111;
+    }
+    .call-info {
+      color: #666;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    .back-link {
+      display: inline-block;
+      color: #0066cc;
+      text-decoration: none;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    .section {
+      background: #fff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 24px;
+    }
+    .section-title {
+      font-size: 20px;
+      margin: 0 0 20px 0;
+      color: #111;
+      font-weight: 600;
+    }
+    
+    /* Conversation Details */
+    .conversation-details {
+      margin-top: 16px;
+    }
+    .conversation-item {
+      margin-bottom: 24px;
+      padding: 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .conversation-item:hover {
+      border-color: #2196f3;
+      box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+      background: #fafafa;
+    }
+    .conversation-item.expanded {
+      border-color: #2196f3;
+      box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15);
+    }
+    .conversation-item:last-child {
+      margin-bottom: 0;
+    }
+    .conversation-round {
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      transition: background 0.2s;
+      pointer-events: none; /* 让点击事件传递到父元素 */
+    }
+    .conversation-item.expanded .conversation-round {
+      background: #e3f2fd;
+      border-bottom: 2px solid #2196f3;
+      border-radius: 6px 6px 0 0;
+    }
+    .conversation-agent {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #e3f2fd;
+      color: #1976d2;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .round-toggle {
+      margin-left: auto;
+      font-size: 12px;
+      color: #666;
+    }
+    .round-feedback-form {
+      display: none;
+      margin-top: 16px;
+      padding: 16px;
+      background: #fafafa;
+      border-radius: 0 0 6px 6px;
+      border-top: 2px solid #2196f3;
+    }
+    .round-feedback-form.expanded {
+      display: block;
+    }
+    .round-feedback-form .form-group {
+      margin-bottom: 16px;
+    }
+    .round-feedback-form .form-label {
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .round-feedback-form .checkbox-group {
+      gap: 8px;
+    }
+    .round-feedback-form .checkbox-item {
+      padding: 8px 10px;
+    }
+    .round-feedback-form textarea {
+      min-height: 80px;
+      font-size: 13px;
+    }
+    .message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      line-height: 1.6;
+      pointer-events: none; /* 让点击事件传递到父元素 */
+    }
+    .message.user {
+      background: #e3f2fd;
+      border-left: 3px solid #2196f3;
+    }
+    .message.ai {
+      background: #f5f5f5;
+      border-left: 3px solid #757575;
+    }
+    .message-label {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #666;
+    }
+    .message.user .message-label {
+      color: #1976d2;
+    }
+    .message.ai .message-label {
+      color: #616161;
+    }
+    
+    /* Feedback Form */
+    .form-group {
+      margin-bottom: 24px;
+    }
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+    .form-label {
+      display: block;
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 12px;
+      color: #333;
+    }
+    .form-label.optional {
+      color: #666;
+    }
+    .form-label.optional::after {
+      content: " (optional)";
+      font-weight: 400;
+      color: #999;
+    }
+    .form-label.section-header {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111;
+      margin-top: 24px;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    .section-description {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 16px;
+      font-style: italic;
+    }
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .checkbox-item:hover {
+      background: #f9f9f9;
+      border-color: #ccc;
+    }
+    .checkbox-item input[type="checkbox"] {
+      margin-right: 10px;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .checkbox-item input[type="radio"] {
+      margin-right: 10px;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .checkbox-item label {
+      cursor: pointer;
+      flex: 1;
+      margin: 0;
+      font-size: 15px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #0066cc;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 14px 24px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .submit-btn:hover {
+      background: #333;
+    }
+    .submit-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    .error {
+      background: #ffebee;
+      color: #c62828;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="calls.html" class="back-link">← Back to Call List</a>
+    
+    <div id="loading" class="loading">Loading call details...</div>
+    <div id="error" class="error hidden"></div>
+    <div id="success" class="success hidden">Feedback submitted successfully!</div>
+    
+    <div id="content" class="hidden">
+      <div class="header">
+        <h1>Call Details</h1>
+        <div class="call-info" id="call-info"></div>
+      </div>
+
+      <!-- Conversation Section -->
+      <div class="section">
+        <h2 class="section-title">Conversation Details</h2>
+        <div class="conversation-timeline" id="conversation-timeline">
+          <!-- Conversation items will be inserted here -->
+        </div>
+      </div>
+
+      <!-- Feedback Section -->
+      <div class="section">
+        <h2 class="section-title">Submit Feedback</h2>
+        <p style="color: #666; margin-bottom: 20px;">Click on any Round above to provide feedback for that specific conversation. Fill out feedback forms for the rounds you want to review, then submit all feedback at once.</p>
+        
+        <form id="feedback-form">
+          <button type="submit" class="submit-btn">Submit All Feedback</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="supabase-client.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const callSid = params.get('call_sid');
+    
+    // 生成单个 Round 的反馈表单 HTML
+    function generateRoundFeedbackForm(round) {
+      return `
+        <div class="round-feedback-form" id="round-feedback-${round}">
+          <div class="form-group">
+            <label class="form-label section-header">🎤 Voice Recognition (ASR) Issues</label>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input type="checkbox" value="none" id="asr-none-${round}" name="asr_issues_${round}">
+                <label for="asr-none-${round}">⭕ No issues</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="recognition_error" id="asr-recognition-${round}" name="asr_issues_${round}">
+                <label for="asr-recognition-${round}">❌ Recognition error</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="truncation_error" id="asr-truncation-${round}" name="asr_issues_${round}">
+                <label for="asr-truncation-${round}">✂️ Truncation error</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="long_silence_asr" id="asr-silence-${round}" name="asr_issues_${round}">
+                <label for="asr-silence-${round}">⏳ Long silence or delay</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="other_asr" id="asr-other-${round}" name="asr_issues_${round}">
+                <label for="asr-other-${round}">📝 Other ASR issues</label>
+              </div>
+            </div>
+            <div class="form-group" id="asr-other-desc-group-${round}" style="display: none; margin-top: 8px;">
+              <textarea id="asr-other-desc-${round}" placeholder="Describe the ASR issue..."></textarea>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label section-header">🔊 Text-to-Speech (TTS) Issues</label>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input type="checkbox" value="none" id="tts-none-${round}" name="tts_issues_${round}">
+                <label for="tts-none-${round}">⭕ No issues</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="unnatural_tone" id="tts-unnatural-${round}" name="tts_issues_${round}">
+                <label for="tts-unnatural-${round}">🗣 Unnatural tone or wording</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="incomplete_vague" id="tts-incomplete-${round}" name="tts_issues_${round}">
+                <label for="tts-incomplete-${round}">⚠️ Incomplete or vague</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="robotic_voice" id="tts-robotic-${round}" name="tts_issues_${round}">
+                <label for="tts-robotic-${round}">🤖 Robotic voice</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="choppy_laggy" id="tts-choppy-${round}" name="tts_issues_${round}">
+                <label for="tts-choppy-${round}">🔊 Choppy or laggy audio</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="talk_over" id="tts-talkover-${round}" name="tts_issues_${round}">
+                <label for="tts-talkover-${round}">🚫 AI talked over me</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="other_tts" id="tts-other-${round}" name="tts_issues_${round}">
+                <label for="tts-other-${round}">📝 Other TTS issues</label>
+              </div>
+            </div>
+            <div class="form-group" id="tts-other-desc-group-${round}" style="display: none; margin-top: 8px;">
+              <textarea id="tts-other-desc-${round}" placeholder="Describe the TTS issue..."></textarea>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label section-header">💬 Agent Text Generation Issues</label>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input type="checkbox" value="none" id="text-none-${round}" name="text_issues_${round}">
+                <label for="text-none-${round}">⭕ No issues</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="incorrect_answer" id="text-incorrect-${round}" name="text_issues_${round}">
+                <label for="text-incorrect-${round}">❌ Incorrect answer</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="incomplete_answer" id="text-incomplete-${round}" name="text_issues_${round}">
+                <label for="text-incomplete-${round}">⚠️ Incomplete or vague</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="misunderstood_request" id="text-misunderstood-${round}" name="text_issues_${round}">
+                <label for="text-misunderstood-${round}">🤔 Misunderstood request</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="inappropriate_context" id="text-context-${round}" name="text_issues_${round}">
+                <label for="text-context-${round}">🔄 Inappropriate context</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="repetitive" id="text-repetitive-${round}" name="text_issues_${round}">
+                <label for="text-repetitive-${round}">🔁 Repetitive response</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="wrong_agent" id="text-wrong-agent-${round}" name="text_issues_${round}">
+                <label for="text-wrong-agent-${round}">👤 Wrong Agent</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" value="other_text" id="text-other-${round}" name="text_issues_${round}">
+                <label for="text-other-${round}">📝 Other text issues</label>
+              </div>
+            </div>
+            <div class="form-group" id="text-other-desc-group-${round}" style="display: none; margin-top: 8px;">
+              <textarea id="text-other-desc-${round}" placeholder="Describe the text issue..."></textarea>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label optional">Additional details for this round (optional)</label>
+            <textarea id="round-desc-${round}" placeholder="Provide more details about this round..."></textarea>
+          </div>
+        </div>
+      `;
+    }
+    
+    // 切换 Round 反馈表单的显示/隐藏（全局函数）
+    window.toggleRoundFeedback = function(round) {
+      const form = document.getElementById(`round-feedback-${round}`);
+      const header = document.getElementById(`round-header-${round}`);
+      const toggle = document.getElementById(`toggle-${round}`);
+      const item = document.getElementById(`round-${round}`);
+      
+      if (!form || !header || !toggle || !item) return;
+      
+      if (form.classList.contains('expanded')) {
+        form.classList.remove('expanded');
+        item.classList.remove('expanded');
+        toggle.textContent = '▼ Click to provide feedback';
+      } else {
+        form.classList.add('expanded');
+        item.classList.add('expanded');
+        toggle.textContent = '▲ Hide feedback form';
+      }
+    };
+    
+    // 初始化单个 Round 的反馈表单交互
+    function initializeRoundFeedback(round) {
+      // Setup None checkboxes
+      setupNoneCheckbox(`asr_issues_${round}`, `asr-none-${round}`);
+      setupNoneCheckbox(`tts_issues_${round}`, `tts-none-${round}`);
+      setupNoneCheckbox(`text_issues_${round}`, `text-none-${round}`);
+      
+      // Setup Other checkboxes
+      setupOtherCheckbox(`asr-other-${round}`, `asr-other-desc-group-${round}`);
+      setupOtherCheckbox(`tts-other-${round}`, `tts-other-desc-group-${round}`);
+      setupOtherCheckbox(`text-other-${round}`, `text-other-desc-group-${round}`);
+    }
+
+    if (!callSid) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('error').textContent = 'Missing call_sid parameter';
+      document.getElementById('error').classList.remove('hidden');
+    }
+
+    // Load call data and conversation
+    async function loadCallData() {
+      try {
+        const client = initSupabase();
+        if (!client) {
+          throw new Error('Failed to initialize Supabase client');
+        }
+        
+        console.log('正在从 Supabase 加载 call:', callSid);
+        
+        // 直接从 Supabase 查询
+        const { data: call, error } = await client
+          .from('n8n_voice_feedback')
+          .select('*')
+          .eq('call_sid', callSid)
+          .single();
+        
+        if (error) {
+          throw new Error(error.message || 'Failed to load call from Supabase');
+        }
+        
+        if (!call) {
+          throw new Error('Call not found');
+        }
+        
+        // 解析 conversations JSON
+        if (call.conversations && typeof call.conversations === 'string') {
+          try {
+            const conversationsStr = call.conversations.trim();
+            if (conversationsStr && conversationsStr !== 'null') {
+              call.conversations = JSON.parse(conversationsStr);
+            } else {
+              call.conversations = null;
+            }
+          } catch (e) {
+            console.warn('Failed to parse conversations:', e);
+            call.conversations = null;
+          }
+        }
+        
+        // 解析 round_feedbacks JSON
+        if (call.round_feedbacks && typeof call.round_feedbacks === 'string') {
+          try {
+            const roundFeedbacksStr = call.round_feedbacks.trim();
+            if (roundFeedbacksStr && roundFeedbacksStr !== 'null') {
+              call.round_feedbacks = JSON.parse(roundFeedbacksStr);
+            } else {
+              call.round_feedbacks = null;
+            }
+          } catch (e) {
+            console.warn('Failed to parse round_feedbacks:', e);
+            call.round_feedbacks = null;
+          }
+        }
+        
+        // Display call info
+        const rounds = call.rounds || call.current_round || (call.conversations ? Object.keys(call.conversations).length : 0) || 0;
+        document.getElementById('call-info').textContent = 
+          `Call SID: ${call.call_sid} • Created: ${new Date(call.created_at).toLocaleString()} • Rounds: ${rounds}`;
+
+        // Display conversation
+        console.log('Call data:', call);
+        console.log('Conversations:', call.conversations);
+        console.log('Conversations type:', typeof call.conversations);
+        
+        if (call.conversations) {
+          const timeline = document.getElementById('conversation-timeline');
+          const conversations = call.conversations;
+          
+          console.log('Processing conversations:', conversations);
+          console.log('Conversation keys:', Object.keys(conversations));
+          
+          // 确保 conversations 是对象
+          if (typeof conversations === 'object' && conversations !== null) {
+            const rounds = Object.keys(conversations).sort((a, b) => parseInt(a) - parseInt(b));
+            console.log('Sorted rounds:', rounds);
+            
+            rounds.forEach(round => {
+              const conv = conversations[round];
+              console.log(`Round ${round}:`, conv);
+              
+              if (conv && (conv.user_request || conv.ai_response)) {
+                const item = document.createElement('div');
+                item.className = 'conversation-item';
+                item.id = `round-${round}`;
+                
+                // 显示 agent 信息
+                const agentName = conv.agent || 'Unknown';
+                const agentBadge = `<span class="conversation-agent">${agentName}</span>`;
+                
+                // 生成反馈表单 HTML
+                const feedbackForm = generateRoundFeedbackForm(round);
+                
+                item.innerHTML = `
+                  <div class="conversation-round" id="round-header-${round}">
+                    <span>Round ${round}</span>
+                    ${agentBadge}
+                    <span class="round-toggle" id="toggle-${round}">▼ Click to provide feedback</span>
+                  </div>
+                  <div class="message user">
+                    <div class="message-label">[User]</div>
+                    <div>${conv.user_request || 'N/A'}</div>
+                  </div>
+                  <div class="message ai">
+                    <div class="message-label">[AI]</div>
+                    <div>${conv.ai_response || 'N/A'}</div>
+                  </div>
+                  ${feedbackForm}
+                `;
+                
+                // 让整个 item 可点击
+                item.addEventListener('click', (e) => {
+                  // 如果点击的是表单内的元素（checkbox, textarea等），不触发展开
+                  if (e.target.closest('.round-feedback-form')) {
+                    return;
+                  }
+                  toggleRoundFeedback(round);
+                });
+                
+                timeline.appendChild(item);
+                
+                // 初始化该 Round 的反馈表单交互
+                initializeRoundFeedback(round);
+              } else {
+                console.warn(`Round ${round} 数据格式不正确:`, conv);
+              }
+            });
+          } else {
+            console.error('Conversations 格式不正确，期望对象，实际:', typeof conversations, conversations);
+            timeline.innerHTML = '<p style="color: #c62828;">无法解析对话数据</p>';
+          }
+        } else {
+          console.warn('没有 conversations 数据');
+          const timeline = document.getElementById('conversation-timeline');
+          timeline.innerHTML = '<p style="color: #666;">暂无对话记录</p>';
+        }
+
+        // Load existing round-specific feedbacks
+        if (call.round_feedbacks) {
+          const roundFeedbacks = call.round_feedbacks;
+          Object.keys(roundFeedbacks).forEach(round => {
+            const feedback = roundFeedbacks[round];
+            
+            // Load ASR issues for this round
+            if (feedback.asr_issues) {
+              const issues = Array.isArray(feedback.asr_issues) ? feedback.asr_issues : [feedback.asr_issues];
+              issues.forEach(issue => {
+                const checkbox = document.getElementById(`asr-${issue}-${round}`);
+                if (checkbox) {
+                  checkbox.checked = true;
+                  // 如果有反馈，自动展开该 Round
+                  const item = document.getElementById(`round-${round}`);
+                  if (item && !item.classList.contains('expanded')) {
+                    toggleRoundFeedback(round);
+                  }
+                }
+              });
+            }
+            if (feedback.asr_other_description) {
+              const checkbox = document.getElementById(`asr-other-${round}`);
+              if (checkbox) {
+                checkbox.checked = true;
+                document.getElementById(`asr-other-desc-group-${round}`).style.display = 'block';
+                document.getElementById(`asr-other-desc-${round}`).value = feedback.asr_other_description;
+                // 自动展开
+                const item = document.getElementById(`round-${round}`);
+                if (item && !item.classList.contains('expanded')) {
+                  toggleRoundFeedback(round);
+                }
+              }
+            }
+            
+            // Load TTS issues for this round
+            if (feedback.tts_issues) {
+              const issues = Array.isArray(feedback.tts_issues) ? feedback.tts_issues : [feedback.tts_issues];
+              issues.forEach(issue => {
+                const checkbox = document.getElementById(`tts-${issue}-${round}`);
+                if (checkbox) {
+                  checkbox.checked = true;
+                  // 自动展开
+                  const item = document.getElementById(`round-${round}`);
+                  if (item && !item.classList.contains('expanded')) {
+                    toggleRoundFeedback(round);
+                  }
+                }
+              });
+            }
+            if (feedback.tts_other_description) {
+              const checkbox = document.getElementById(`tts-other-${round}`);
+              if (checkbox) {
+                checkbox.checked = true;
+                document.getElementById(`tts-other-desc-group-${round}`).style.display = 'block';
+                document.getElementById(`tts-other-desc-${round}`).value = feedback.tts_other_description;
+                // 自动展开
+                const item = document.getElementById(`round-${round}`);
+                if (item && !item.classList.contains('expanded')) {
+                  toggleRoundFeedback(round);
+                }
+              }
+            }
+            
+            // Load Text issues for this round
+            if (feedback.text_issues) {
+              const issues = Array.isArray(feedback.text_issues) ? feedback.text_issues : [feedback.text_issues];
+              issues.forEach(issue => {
+                const checkbox = document.getElementById(`text-${issue}-${round}`);
+                if (checkbox) {
+                  checkbox.checked = true;
+                  // 自动展开
+                  const item = document.getElementById(`round-${round}`);
+                  if (item && !item.classList.contains('expanded')) {
+                    toggleRoundFeedback(round);
+                  }
+                }
+              });
+            }
+            if (feedback.text_other_description) {
+              const checkbox = document.getElementById(`text-other-${round}`);
+              if (checkbox) {
+                checkbox.checked = true;
+                document.getElementById(`text-other-desc-group-${round}`).style.display = 'block';
+                document.getElementById(`text-other-desc-${round}`).value = feedback.text_other_description;
+                // 自动展开
+                const item = document.getElementById(`round-${round}`);
+                if (item && !item.classList.contains('expanded')) {
+                  toggleRoundFeedback(round);
+                }
+              }
+            }
+            
+            // Load round description
+            if (feedback.description) {
+              const descField = document.getElementById(`round-desc-${round}`);
+              if (descField) {
+                descField.value = feedback.description;
+                // 如果有描述，自动展开
+                const item = document.getElementById(`round-${round}`);
+                if (item && !item.classList.contains('expanded')) {
+                  toggleRoundFeedback(round);
+                }
+              }
+            }
+          });
+        }
+
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('content').classList.remove('hidden');
+      } catch (error) {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('error').textContent = `Error: ${error.message}`;
+        document.getElementById('error').classList.remove('hidden');
+        console.error('Error loading call:', error);
+      }
+    }
+
+    // Handle "None" checkbox logic
+    function setupNoneCheckbox(groupName, noneId) {
+      const noneCheckbox = document.getElementById(noneId);
+      if (!noneCheckbox) return;
+      
+      const otherCheckboxes = document.querySelectorAll(`input[name="${groupName}"]:not(#${noneId})`);
+      
+      noneCheckbox.addEventListener('change', () => {
+        if (noneCheckbox.checked) {
+          otherCheckboxes.forEach(cb => cb.checked = false);
+        }
+      });
+      
+      otherCheckboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+          if (cb.checked) {
+            noneCheckbox.checked = false;
+          }
+        });
+      });
+    }
+
+    // Handle "Other" checkbox logic - show/hide description field
+    function setupOtherCheckbox(otherId, descGroupId) {
+      const otherCheckbox = document.getElementById(otherId);
+      const descGroup = document.getElementById(descGroupId);
+      
+      if (!otherCheckbox || !descGroup) return;
+      
+      otherCheckbox.addEventListener('change', (e) => {
+        descGroup.style.display = e.target.checked ? 'block' : 'none';
+      });
+    }
+
+    // Note: Round-specific feedback form setup is done in initializeRoundFeedback()
+    // which is called for each round when conversations are loaded
+
+    // 收集单个 Round 的反馈数据
+    function collectRoundFeedback(round) {
+      const roundData = {
+        round: parseInt(round),
+        asr_issues: [],
+        tts_issues: [],
+        text_issues: [],
+        asr_other_description: null,
+        tts_other_description: null,
+        text_other_description: null,
+        description: null
+      };
+      
+      // Collect ASR issues
+      const asrCheckboxes = document.querySelectorAll(`input[name="asr_issues_${round}"]:checked`);
+      asrCheckboxes.forEach(cb => {
+        if (cb.value !== 'none') {
+          roundData.asr_issues.push(cb.value);
+        }
+      });
+      if (roundData.asr_issues.length === 0) roundData.asr_issues = null;
+      
+      // Collect TTS issues
+      const ttsCheckboxes = document.querySelectorAll(`input[name="tts_issues_${round}"]:checked`);
+      ttsCheckboxes.forEach(cb => {
+        if (cb.value !== 'none') {
+          roundData.tts_issues.push(cb.value);
+        }
+      });
+      if (roundData.tts_issues.length === 0) roundData.tts_issues = null;
+      
+      // Collect Text issues
+      const textCheckboxes = document.querySelectorAll(`input[name="text_issues_${round}"]:checked`);
+      textCheckboxes.forEach(cb => {
+        if (cb.value !== 'none') {
+          roundData.text_issues.push(cb.value);
+        }
+      });
+      if (roundData.text_issues.length === 0) roundData.text_issues = null;
+      
+      // Collect descriptions
+      const asrOtherDesc = document.getElementById(`asr-other-desc-${round}`);
+      if (asrOtherDesc) roundData.asr_other_description = asrOtherDesc.value.trim() || null;
+      
+      const ttsOtherDesc = document.getElementById(`tts-other-desc-${round}`);
+      if (ttsOtherDesc) roundData.tts_other_description = ttsOtherDesc.value.trim() || null;
+      
+      const textOtherDesc = document.getElementById(`text-other-desc-${round}`);
+      if (textOtherDesc) roundData.text_other_description = textOtherDesc.value.trim() || null;
+      
+      const roundDesc = document.getElementById(`round-desc-${round}`);
+      if (roundDesc) roundData.description = roundDesc.value.trim() || null;
+      
+      // 如果这个 Round 没有任何反馈，返回 null
+      if (!roundData.asr_issues && !roundData.tts_issues && !roundData.text_issues && 
+          !roundData.asr_other_description && !roundData.tts_other_description && 
+          !roundData.text_other_description && !roundData.description) {
+        return null;
+      }
+      
+      return roundData;
+    }
+    
+    // Submit feedback
+    document.getElementById('feedback-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // 收集所有 Round 的反馈
+      const roundFeedbacks = {};
+      const conversationItems = document.querySelectorAll('.conversation-item');
+      
+      conversationItems.forEach(item => {
+        const roundId = item.id.replace('round-', '');
+        if (roundId && roundId !== '') {
+          const roundData = collectRoundFeedback(roundId);
+          if (roundData) {
+            roundFeedbacks[roundId] = roundData;
+          }
+        }
+      });
+      
+      // 检查是否有任何反馈
+      if (Object.keys(roundFeedbacks).length === 0) {
+        alert('Please provide feedback for at least one Round before submitting.');
+        return;
+      }
+      
+      console.log('Submitting feedback:', roundFeedbacks);
+
+      try {
+        const client = initSupabase();
+        if (!client) {
+          throw new Error('Failed to initialize Supabase client');
+        }
+        
+        // 直接更新 Supabase
+        const { data, error } = await client
+          .from('n8n_voice_feedback')
+          .update({
+            round_feedbacks: roundFeedbacks
+          })
+          .eq('call_sid', callSid)
+          .select();
+        
+        if (error) {
+          throw new Error(error.message || 'Failed to submit feedback to Supabase');
+        }
+        
+        if (!data || data.length === 0) {
+          throw new Error('Call not found or update failed');
+        }
+
+        // 跳转到成功页面
+        window.location.href = `success.html?call_sid=${encodeURIComponent(callSid)}`;
+      } catch (error) {
+        document.getElementById('error').textContent = `Error: ${error.message}`;
+        document.getElementById('error').classList.remove('hidden');
+        document.getElementById('success').classList.add('hidden');
+        console.error('Error submitting feedback:', error);
+      }
+    });
+
+    if (callSid) {
+      loadCallData();
+    }
+  </script>
+</body>
+</html>

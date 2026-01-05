@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Call History - Feedback System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      padding: 24px;
+      margin: 0;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: #111;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 24px;
+    }
+    .calls-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 24px;
+    }
+    .calls-table th {
+      text-align: left;
+      padding: 12px;
+      background: #f9f9f9;
+      border-bottom: 2px solid #eee;
+      font-weight: 600;
+      color: #333;
+      font-size: 14px;
+    }
+    .calls-table td {
+      padding: 16px 12px;
+      border-bottom: 1px solid #eee;
+    }
+    .calls-table tr {
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .calls-table tr:hover {
+      background: #f9f9f9;
+    }
+    .call-sid {
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+      color: #0066cc;
+    }
+    .call-time {
+      color: #666;
+      font-size: 14px;
+    }
+    .call-rounds {
+      color: #333;
+      font-weight: 500;
+    }
+    .feedback-status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .feedback-status.has-feedback {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .feedback-status.no-feedback {
+      background: #fff3e0;
+      color: #e65100;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    .error {
+      background: #ffebee;
+      color: #c62828;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+    .help-link {
+      display: inline-block;
+      margin-top: 12px;
+      color: #0066cc;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .help-link:hover {
+      text-decoration: underline;
+    }
+    .debug-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 12px;
+      color: #666;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Call History</h1>
+    <p class="subtitle">Select a call to view conversation and provide feedback</p>
+    
+    <div id="loading" class="loading">Loading calls...</div>
+    
+    <table class="calls-table hidden" id="calls-table">
+      <thead>
+        <tr>
+          <th>Call SID</th>
+          <th>Time</th>
+          <th>Rounds</th>
+          <th>Feedback</th>
+        </tr>
+      </thead>
+      <tbody id="calls-tbody">
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="supabase-client.js"></script>
+  <script>
+    async function loadCalls() {
+      try {
+        const client = initSupabase();
+        if (!client) {
+          throw new Error('Failed to initialize Supabase client');
+        }
+        
+        console.log('正在从 Supabase 加载 calls...');
+        
+        // 直接从 Supabase 查询
+        const { data: calls, error } = await client
+          .from('n8n_voice_feedback')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        
+        if (error) {
+          throw new Error(error.message || 'Failed to load calls from Supabase');
+        }
+        
+        console.log('Loaded calls:', calls?.length || 0, calls);
+        
+        if (!calls || calls.length === 0) {
+          document.getElementById('loading').classList.add('hidden');
+          return;
+        }
+
+        // 处理数据，计算轮次数
+        calls.forEach(call => {
+          // 解析 conversations JSON
+          let conversations = call.conversations;
+          if (typeof conversations === 'string') {
+            try {
+              conversations = conversations.trim();
+              if (conversations && conversations !== 'null') {
+                conversations = JSON.parse(conversations);
+              } else {
+                conversations = null;
+              }
+            } catch (e) {
+              console.warn('Failed to parse conversations:', e);
+              conversations = null;
+            }
+          }
+          
+          // 计算轮次数
+          if (conversations && typeof conversations === 'object') {
+            call.rounds = Object.keys(conversations).length;
+          } else {
+            call.rounds = call.current_round || 0;
+          }
+        });
+
+        // 如果有数据，隐藏 loading 并显示表格
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('calls-table').classList.remove('hidden');
+
+        const tbody = document.getElementById('calls-tbody');
+        calls.forEach(call => {
+          const row = document.createElement('tr');
+          const shortSid = call.call_sid ? call.call_sid.slice(-6) : 'N/A';
+          const time = call.created_at ? new Date(call.created_at).toLocaleString() : 'N/A';
+          const rounds = call.rounds || 0;
+          
+          // 检查是否有反馈（检查 round_feedbacks 或 legacy 字段）
+          const hasRoundFeedbacks = call.round_feedbacks && 
+            (typeof call.round_feedbacks === 'object' ? Object.keys(call.round_feedbacks).length > 0 : true);
+          const hasLegacyFeedback = call.is_appropriate !== null || 
+            call.issue_type !== null || 
+            call.description !== null;
+          const hasFeedback = hasRoundFeedbacks || hasLegacyFeedback;
+          
+          row.innerHTML = `
+            <td class="call-sid">${shortSid}</td>
+            <td class="call-time">${time}</td>
+            <td class="call-rounds">${rounds}</td>
+            <td>
+              <span class="feedback-status ${hasFeedback ? 'has-feedback' : 'no-feedback'}">
+                ${hasFeedback ? '✓ Has feedback' : '— No feedback'}
+              </span>
+            </td>
+          `;
+          
+          row.addEventListener('click', () => {
+            window.location.href = `call.html?call_sid=${call.call_sid}`;
+          });
+          
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        document.getElementById('loading').classList.add('hidden');
+        let errorMsg = `错误: ${error.message}`;
+        
+        console.error('详细错误信息:', error);
+        console.error('错误堆栈:', error.stack);
+        
+        // 显示错误信息
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error';
+        errorDiv.style.marginTop = '16px';
+        errorDiv.textContent = errorMsg;
+        document.querySelector('.container').appendChild(errorDiv);
+      }
+    }
+
+    loadCalls();
+  </script>
+</body>
+</html>
